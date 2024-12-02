@@ -17,31 +17,41 @@
   #include <Wire.h>//"CAN"
 
 //vars and defs
+
+  double heading;
+
   //motor definitions
     int motor1_pwm = 33;
     int motor1_FWD = 25;
     int motor1_BWD = 32;
     int motor1_angle_degrees = 0;
     float motor1_angle =motor1_angle_degrees*(M_PI/180);
+    Motor_L928N FMotor=Motor_L928N(25,32,33);
 
     int motor2_pwm = 19;
     int motor2_FWD = 5;
     int motor2_BWD = 18;
     int motor2_angle_degrees = 120;
     float motor2_angle =motor2_angle_degrees*(M_PI/180);
+    Motor_L928N RMotor=Motor_L928N(5,18,19);
 
     int motor3_pwm = 26;
     int motor3_FWD = 27;
     int motor3_BWD = 14;
     int motor3_angle_degrees = 240;
     float motor3_angle =motor3_angle_degrees*(M_PI/180);
+    Motor_L928N LMotor=Motor_L928N(27,14,26);
 
+    int maxMotorSpeed = 204;
+    
+    kiwiDriveTrain drivetrain = kiwiDriveTrain(&LMotor,&FMotor,&RMotor,&heading,maxMotorSpeed);
+    
   //speeds
   float motor1_Speed;
   float motor2_Speed;
   float motor3_Speed;
 
-  int maxMotorSpeed = 204;
+  
   //create a turret servo
     int servo_pwm=23;
     Servo turret;
@@ -61,7 +71,6 @@
   float aX, aY, aZ, aSqrt,gX,gY,gZ,magX,magY,magZ,magHeading ,initialHeading,baseGyroVal;//mpu9250 vals
   float gyroTester=0;
 
-  double heading;
 
 
 
@@ -95,6 +104,7 @@
 //functions
   //kiwidrive function
     void kiwiDrive(int Forwards,int Right,int Rotate,float botRot){
+      
       Forwards*=-1;               //make positive speed forwards    
       botRot =botRot*(M_PI/180);  //convert gyro degrees to radians
 
@@ -151,6 +161,7 @@
   //system starting
     Wire.begin();       //initiate "can" bus
     Serial.begin(9600); //communicate with computer baud rate 9600
+    drivetrain.setAnglesDegrees(motor3_angle_degrees,motor1_angle_degrees,motor2_angle_degrees);
 
   //gyro beginning
     mySensor.setWire(&Wire);//attach gryo
@@ -179,7 +190,7 @@
     indiStrip.begin();
     indiStrip.show();
 
-  //motor pin inits
+  /*
     pinMode(motor1_pwm, OUTPUT);
     pinMode(motor1_FWD, OUTPUT);
     pinMode(motor1_BWD, OUTPUT);
@@ -198,7 +209,7 @@
     digitalWrite(motor2_BWD,LOW);
     digitalWrite(motor3_FWD,LOW);
     digitalWrite(motor3_BWD,LOW);
-  
+  */
 
   //ps5 init
     ps5.begin("4C:B9:9B:A5:54:8E");
@@ -244,6 +255,7 @@ void loop() {
     else{
       headingCorrection=toggleButton(ps5.L1(),&l1pressedrecent,headingCorrection);
     }
+    
 
   //watiting for ps5 controller
     while (ps5.isConnected()==false && waitForPs5==true){
@@ -260,7 +272,8 @@ void loop() {
   //if no heading correction
     //basic rotation drive
       if(headingCorrection==false){
-        kiwiDrive(ps5.LStickY()*2,ps5.LStickX()*2,ps5.RStickX()*1.5,heading);
+        //kiwiDrive(ps5.LStickY()*2,ps5.LStickX()*2,ps5.RStickX()*1.5,heading);
+        drivetrain.drive(ps5.LStickY()*2,ps5.LStickX()*2,ps5.RStickX()*1.5,heading);
       }
 
   //if heading correction
@@ -268,12 +281,11 @@ void loop() {
     else{
       headingIn+=ps5.RStickX()/4;//move setpoint based on controller
 
-      kiwiDrive(ps5.LStickY()*2,ps5.LStickX()*2,pidLoop(headingIn,heading,headingP,headingI,headingD,&headingIO,false,2.0,&ITimer,100,&Perror),heading);
-
-
+      //kiwiDrive(ps5.LStickY()*2,ps5.LStickX()*2,pidLoop(headingIn,heading,headingP,headingI,headingD,&headingIO,false,2.0,&ITimer,100,&Perror),heading);
+      drivetrain.drive(ps5.LStickY()*2,ps5.LStickX()*2,pidLoop(headingIn,heading,headingP,headingI,headingD,&headingIO,false,2.0,&ITimer,100,&Perror),heading);
     }
   //Normalize motors
-    if(max(max(abs(motor1_Speed),abs(motor2_Speed)),abs(motor3_Speed))>=maxMotorSpeed){
+    /*if(max(max(abs(motor1_Speed),abs(motor2_Speed)),abs(motor3_Speed))>=maxMotorSpeed){
         float ratio = 256/(max(max(abs(motor1_Speed),abs(motor2_Speed)),abs(motor3_Speed)));
         
         motor1_Speed*=ratio;
@@ -314,7 +326,7 @@ void loop() {
       analogWrite(motor1_pwm,abs(motor1_Speed));
       analogWrite(motor2_pwm,abs(motor2_Speed));
       analogWrite(motor3_pwm,abs(motor3_Speed));
-
+  */
 
   //get drive direction angle
     int leftStickAngle  = atan2(ps5.LStickY(),ps5.LStickX())*180/M_PI;
