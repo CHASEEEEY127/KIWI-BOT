@@ -442,20 +442,7 @@ void loop() {
 
 
       }
-    
-  //set leds
-  /*
-    if(feildO){
-      indiStrip.setPixelColor(6,0,255,0);
-    }
-    else{indiStrip.setPixelColor(6,255,0,0);
-    headingCorrection=false;}
 
-    if(headingCorrection){
-      indiStrip.setPixelColor(5,0,255,0);
-    }
-    else{indiStrip.setPixelColor(5,255,0,0);}
-*/
     StatusLed(feildO,6,&indiStrip);
     StatusLed(headingCorrection,5,&indiStrip);
 
