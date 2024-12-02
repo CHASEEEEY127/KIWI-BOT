@@ -72,7 +72,6 @@
     double Perror;
 
     double headingIn=0; //gyro
-    double PHeadingIn=0;  //previous gyro val
 
     double headingP=5;    //Kp
     double headingPO;     //proportional output
@@ -216,15 +215,16 @@
 
 //loop
 void loop() {
+
+  update_gyro();
+
   //heading reset
     if(ps5.Touchpad()){
-      ps5.setLed(255, 0, 0);
-      ps5.sendToController();
       gyroTester=0;
       headingIn=0;
     }
 
-  update_gyro();
+  
   //integrate gyro 
     if(gZ<0){
     gyroTester+=(((gZ-baseGyroVal)*36/34)*36/38)*36/40*36/43*36/35*360/346.17*36/37*36/37;}
@@ -232,24 +232,17 @@ void loop() {
       gyroTester+=((((gZ-baseGyroVal)*36/34)*36/38)*360/354)*36/40*36/43*360/338*9/10*360/345.45*36/37;}
 
     heading= (gyroTester/12);
-  //toggle feild oriented
-    if(ps5.R1()&&(r1pressedrecent==false)){
-      feildO=!feildO;
-      r1pressedrecent=true;
-      }
-    if(ps5.R1()==false){
-      r1pressedrecent=false;
-    }
+
+
+//toggle feild orientation and heading correction
+    feildO=toggleButton(ps5.R1(),&r1pressedrecent,feildO);
+
     if(feildO==false){
       heading=0;
+      headingCorrection=false;
     }
-  //toggle heading correction
-    if(ps5.L1()&&(l1pressedrecent==false)){
-    headingCorrection=!headingCorrection;
-    l1pressedrecent=true;
-    }
-    if(ps5.L1()==false){
-      l1pressedrecent=false;
+    else{
+      headingCorrection=toggleButton(ps5.L1(),&l1pressedrecent,headingCorrection);
     }
 
   //watiting for ps5 controller
@@ -261,7 +254,9 @@ void loop() {
         indiStrip.setPixelColor(7,0,0,0);
         indiStrip.show();
           delay(500);
+          
     }
+
   //if no heading correction
     //basic rotation drive
       if(headingCorrection==false){
@@ -270,59 +265,13 @@ void loop() {
 
   //if heading correction
     //heading correction
-      else{
-        //change setpoint
-          headingIn+=ps5.RStickX()/4;//move setpoint based on controller
-          
-        //kiwiDrive(ps5.LStickY()*2,ps5.LStickX()*2,headingPID,heading);
-        
-        
-      
-        //set PID outputs
+    else{
+      headingIn+=ps5.RStickX()/4;//move setpoint based on controller
 
-          goalHeading=heading;
-          
-          error=(headingIn-goalHeading);
+      kiwiDrive(ps5.LStickY()*2,ps5.LStickX()*2,pidLoop(headingIn,heading,headingP,headingI,headingD,&headingIO,false,2.0,&ITimer,100,&Perror),heading);
 
-          while(error>180){
-            error-=360;
-          }
-          while(error<-180){
-            error+=360;
-          }
-          headingPO=error*headingP;//set P
-          headingDO=(error-Perror)*headingD;//set D
-          headingIO+= error*headingI;//integreate I
-          headingIO=max(min(headingIO,maxI),-maxI);
-          headingPID=headingPO+headingDO+headingIO*DOI;//total output
-          
-        //if im not close
-          //do PID
-            if(abs(error)>2){
-              kiwiDrive(ps5.LStickY()*2,ps5.LStickX()*2,headingPID,heading);//PID
-              ITimer=0;//reset I's cancelation timer
-              DOI=1;   //ensure I is integrating
-            }
-        //if I am close  
-          //wait 20 cycles to reset I
-            else if(ITimer<20){
-              ITimer++;
-              DOI=0;  //dont integrate anymore
-              kiwiDrive(ps5.LStickY()*2,ps5.LStickX()*2,0,heading);
-            }
 
-          //stop PID  
-            else{
-              kiwiDrive(ps5.LStickY()*2,ps5.LStickX()*2,0,heading);//dont rotate anymore
-              headingIO=0;//reset I output
-              DOI=0;//stop integrateing
-            }
-
-        // setprevious values
-          Perror=error; //remember error fo rnext cycle
-          PHeadingIn=headingIn;   //remember target heading for next cycle
-
-      }
+    }
   //Normalize motors
     if(max(max(abs(motor1_Speed),abs(motor2_Speed)),abs(motor3_Speed))>=maxMotorSpeed){
         float ratio = 256/(max(max(abs(motor1_Speed),abs(motor2_Speed)),abs(motor3_Speed)));
@@ -495,7 +444,7 @@ void loop() {
       }
     
   //set leds
-  
+  /*
     if(feildO){
       indiStrip.setPixelColor(6,0,255,0);
     }
@@ -506,42 +455,19 @@ void loop() {
       indiStrip.setPixelColor(5,0,255,0);
     }
     else{indiStrip.setPixelColor(5,255,0,0);}
+*/
+    StatusLed(feildO,6,&indiStrip);
+    StatusLed(headingCorrection,5,&indiStrip);
 
     if(ps5.isConnected()){
       indiStrip.setPixelColor(7,0,0,255);
     }
 
+    setMotorLed(motor1_Speed,15,1,&indiStrip);
+    setMotorLed(motor2_Speed,15,2,&indiStrip);
+    setMotorLed(motor3_Speed,15,0,&indiStrip);
 
-    if(motor1_Speed>10){
-      indiStrip.setPixelColor(1,0,motor1_Speed*255/260,0);
-      }
-    else if(motor1_Speed<-10){
-      indiStrip.setPixelColor(1,abs(motor1_Speed*255/260),0,0);
-    }
-    else{
-      indiStrip.setPixelColor(1,0,0,0);
-    }
 
-    if(motor2_Speed>10){
-      indiStrip.setPixelColor(2,0,motor2_Speed*255/260,0);
-      }
-    else if(motor2_Speed<-10){
-      indiStrip.setPixelColor(2,abs(motor2_Speed*255/260),0,0);
-    }
-    else{
-      indiStrip.setPixelColor(2,0,0,0);
-    }
-
-    if(motor3_Speed>10){
-      indiStrip.setPixelColor(0,0,motor3_Speed*255/260,0);
-      }
-    else if(motor3_Speed<-10){
-      indiStrip.setPixelColor(0,abs(motor3_Speed*255/260),0,0);
-    }
-    else{
-      indiStrip.setPixelColor(0,0,0,0);
-    }
-    
     indiStrip.show();
 
 
