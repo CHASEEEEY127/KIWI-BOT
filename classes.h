@@ -39,7 +39,7 @@ static bool toggleButton(bool button,bool *pressedRecent,bool output){
 
 
 
-static int pidLoop(double setpoint,double current,double KP,double KI,double KD, double *IO,bool loop360,double threshHold,int *ITimer,double maxI, double *PreviousError){          
+static int pidLoop(double setpoint,double current,double KP,double KI,double KD, double *IO,bool loop360,double threshHold,int *ITimer,double maxI, double *PreviousError, double *outputError){          
 
           double error=(setpoint-current);
           if(loop360){
@@ -50,6 +50,7 @@ static int pidLoop(double setpoint,double current,double KP,double KI,double KD,
               error+=360;
             }
           }
+          *outputError=error;
           int DOI;
 
           //if im not close
@@ -93,48 +94,7 @@ static int pidLoop(double setpoint,double current,double KP,double KI,double KD,
 
 
 
- class Motor_L928N{
-
-  public:
-    int FWD_PIN;
-    int BKD_PIN;
-    int SPD_PIN;
-    int SPD;
-
-    Motor_L928N(int forward_pin, int backward_pin, int speed_pin){
-      FWD_PIN = forward_pin;
-      BKD_PIN = backward_pin;
-      SPD_PIN = speed_pin;
-      SPD=0;
-      pinMode(FWD_PIN, OUTPUT);
-	    pinMode(BKD_PIN, OUTPUT);
-	    pinMode(SPD_PIN, OUTPUT);
-      digitalWrite(FWD_PIN,LOW);
-      digitalWrite(BKD_PIN,LOW);
-
-
-    }
-
-    void set(int spd){
-      this->SPD=spd;
-
-      if(spd>=0){
-        digitalWrite(FWD_PIN,0);
-        digitalWrite(BKD_PIN,1);
-      }
-      if(spd<0){
-        digitalWrite(FWD_PIN,1);
-        digitalWrite(BKD_PIN,0);
-      }
-      //analogWrite(this->SPD_PIN,abs(spd));
-      analogWrite(SPD_PIN,abs(spd));
-      
-      }
-
-    int getSpeed(){
-        return SPD;
-    }
-};
+ 
 /*
 class omniWheel{
   public:
